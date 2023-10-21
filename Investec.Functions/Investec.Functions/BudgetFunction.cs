@@ -5,11 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using SendGrid;
-using SendGrid.Helpers.Mail;
+using Azure.Communication.Email;
+using Azure;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
@@ -18,33 +17,23 @@ namespace Investec.Functions;
 public static class BudgetFunction
 {
     [FunctionName("BudgetFunction")]
-    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req, 
-    [FromBody] Transaction transaction, 
-    ILogger log)
+    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req, ILogger log)
     {
-        log.LogInformation("C# HTTP trigger function processed a request.");
-
-        string name = req.Query["name"];
-
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-        dynamic data = JsonConvert.DeserializeObject(requestBody);
-        name = name ?? data?.name;
-
+        Transaction data = JsonConvert.DeserializeObject<Transaction>(requestBody);
         await SendNotification();
-        return name != null
-            ? (ActionResult)new OkObjectResult($"Hello, {name}")
-            : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+        return (ActionResult)new OkObjectResult(JsonConvert.SerializeObject(data));
     }
 
     private static async Task SendNotification()
     {
-        var apiKey = Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
+        var apiKey = "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";
         var client = new SendGridClient(apiKey);
-        var from = new EmailAddress("test@example.com", "Example User");
+        var from = new SendGrid.Helpers.Mail.EmailAddress("donotreply55664@gmail.com", "Investec");
         var subject = "Sending with SendGrid is Fun";
-        var to = new EmailAddress("khanimamaban@agilebridge.co.za", "Khanimamba");
-        var plainTextContent = "Budget notification";
-        var htmlContent = "<strong>Budget notification details</strong>";
+        var to = new SendGrid.Helpers.Mail.EmailAddress("daniel@agilebridge.co.za", "Danie");
+        var plainTextContent = "and easy to do anywhere with C#.";
+        var htmlContent = "<strong>and easy to do anywhere with C#.</strong>";
         var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
         var response = await client.SendEmailAsync(msg);
     }
